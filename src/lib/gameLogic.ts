@@ -41,19 +41,21 @@ export const LEVELS: LevelConfig[] = [
     ]
   },
   { rows: 5, cols: 6, layers: 1, maxNum: 15 },  // 30 tiles
-  { rows: 4, cols: 4, layers: 2, maxNum: 8 },   // 32 tiles (2 layers)
+  { rows: 6, cols: 6, layers: 1, maxNum: 18 },  // 36 tiles
   { 
-    rows: 5, cols: 5, layers: 2, maxNum: 12,
+    rows: 7, cols: 7, layers: 1, maxNum: 24,
     pattern: [
-      "X X X",
-      " XXX ",
-      "X X X",
-      " XXX ",
-      "X X X"
+      "XXXXXXX",
+      "X     X",
+      "X XXX X",
+      "X X X X",
+      "X XXX X",
+      "X     X",
+      "XXXXXXX"
     ]
   },
-  { rows: 5, cols: 6, layers: 2, maxNum: 15 },  // 60 tiles (2 layers)
-  { rows: 6, cols: 6, layers: 2, maxNum: 18 },  // 72 tiles (2 layers)
+  { rows: 8, cols: 8, layers: 1, maxNum: 32 },  // 64 tiles
+  { rows: 10, cols: 10, layers: 1, maxNum: 50 }, // 100 tiles
 ];
 
 export function generateLevel(levelIndex: number): TileData[] {
@@ -81,7 +83,7 @@ export function generateLevel(levelIndex: number): TileData[] {
 
   const values: number[] = [];
   for (let i = 0; i < finalTotal / 2; i++) {
-    const val = (i % config.maxNum) + 1;
+    const val = i + 1;
     values.push(val, val);
   }
 
