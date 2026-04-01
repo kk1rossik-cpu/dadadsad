@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Settings as SettingsIcon, RotateCcw, Lightbulb, Play, Home, Heart, BarChart2, Shuffle, Maximize2, Minimize2 } from "lucide-react";
+import { Settings as SettingsIcon, RotateCcw, Lightbulb, Play, Home, Heart, BarChart2, Shuffle } from "lucide-react";
 import confetti from "canvas-confetti";
 
 import { TileData, generateLevel, updateAvailability, checkMatch, LEVELS } from "./lib/gameLogic";
@@ -45,7 +45,6 @@ export default function App() {
   const [showStats, setShowStats] = useState(false);
   const [startTime, setStartTime] = useState<number>(0);
   const [nextValueToMatch, setNextValueToMatch] = useState(1);
-  const [zoomMode, setZoomMode] = useState<"fit" | "original">("fit");
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 1200,
     height: typeof window !== "undefined" ? window.innerHeight : 800,
@@ -77,7 +76,6 @@ export default function App() {
     const newTiles = generateLevel(levelIdx);
     setTiles(newTiles);
     setGameState("playing");
-    setZoomMode("fit");
     setHistory([]);
     setSelectedTile(null);
     setHintedTiles([]);
@@ -310,15 +308,9 @@ export default function App() {
   
   const scaleX = availableWidth / boardWidth;
   const scaleY = availableHeight / boardHeight;
-  const fitScale = Math.min(1, scaleX, scaleY);
-  const gameScale = zoomMode === "fit" ? fitScale : (isMobile ? 0.8 : 1);
-
-  // Auto-switch zoom mode for very large levels
-  useEffect(() => {
-    if (fitScale < 0.5 && zoomMode === "fit") {
-      setZoomMode("original");
-    }
-  }, [fitScale, zoomMode]);
+  
+  // Scale to fit height, width can overflow for horizontal scrolling
+  const gameScale = Math.min(1, scaleY);
 
   // Update music volume when it changes
   useEffect(() => {
@@ -516,18 +508,6 @@ export default function App() {
                   <span className={`text-xs md:text-2xl font-black ${
                     theme === "cartoon" ? "text-amber-600" : "text-blue-600"
                   }`}>Ищи: {nextValueToMatch}</span>
-                  
-                  {isMobile && fitScale < 0.8 && (
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setZoomMode(zoomMode === "fit" ? "original" : "fit")}
-                      className={`p-1.5 rounded-lg border-2 ${
-                        theme === "cartoon" ? "border-amber-200 text-amber-500" : "border-blue-200 text-blue-500"
-                      }`}
-                    >
-                      {zoomMode === "fit" ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
-                    </motion.button>
-                  )}
                 </motion.div>
                 <div className="flex gap-1 mt-0.5">
                   {[...Array(3)].map((_, i) => (
@@ -555,37 +535,33 @@ export default function App() {
             </header>
 
             {/* Game Area */}
-            <main ref={containerRef} className="flex-1 relative flex items-center justify-center overflow-hidden touch-none">
-              <motion.div 
-                ref={boardRef}
-                drag={zoomMode === "original"}
-                dragConstraints={containerRef}
-                dragElastic={0.1}
-                className="relative transition-transform duration-300"
+            <main className="flex-1 relative flex items-center overflow-x-auto overflow-y-hidden no-scrollbar touch-pan-x">
+              <div 
+                className="relative mx-auto transition-transform duration-300"
                 style={{ 
-                  width: boardWidth, 
-                  height: boardHeight,
-                  transform: `scale(${gameScale})`,
-                  transformOrigin: 'center center'
+                  width: boardWidth * gameScale, 
+                  height: boardHeight * gameScale,
+                  minWidth: boardWidth * gameScale,
                 }}
               >
-                {tiles.map(tile => (
-                  <Tile
-                    key={tile.id}
-                    tile={tile}
-                    isSelected={selectedTile?.id === tile.id}
-                    isHinted={hintedTiles.includes(tile.id)}
-                    onClick={handleTileClick}
-                    theme={theme}
-                  />
-                ))}
-              </motion.div>
-              
-              {zoomMode === "original" && isMobile && (
-                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/20 text-white px-3 py-1 rounded-full text-[10px] font-bold pointer-events-none">
-                  Двигай поле пальцем
+                <div style={{ 
+                  transform: `scale(${gameScale})`, 
+                  transformOrigin: 'top left',
+                  width: boardWidth,
+                  height: boardHeight
+                }}>
+                  {tiles.map(tile => (
+                    <Tile
+                      key={tile.id}
+                      tile={tile}
+                      isSelected={selectedTile?.id === tile.id}
+                      isHinted={hintedTiles.includes(tile.id)}
+                      onClick={handleTileClick}
+                      theme={theme}
+                    />
+                  ))}
                 </div>
-              )}
+              </div>
             </main>
 
             {/* Footer Controls */}
