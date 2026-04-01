@@ -98,12 +98,34 @@ export default function App() {
     }
 
     // 2. Game logic (only for available tiles)
-    if (!tile.isAvailable) {
+    if (!tile.isAvailable || tile.isMatched) {
       return;
     }
 
-    // Availability check
-    if (!tile.isAvailable || tile.isMatched) {
+    // Sequential matching check
+    if (tile.value !== nextValueToMatch) {
+      playSoundEffect('error', volume);
+      setLives(prev => {
+        const next = prev - 1;
+        if (next <= 0) {
+          setStats(prevStats => {
+            const newStats = { ...prevStats };
+            newStats.totalGames += 1;
+            const levelStat = { ...(newStats.levelStats[currentLevel] || {
+              levelId: currentLevel,
+              fastestTime: null,
+              wins: 0,
+              attempts: 0
+            }) };
+            levelStat.attempts += 1;
+            newStats.levelStats[currentLevel] = levelStat;
+            localStorage.setItem("mahjong_stats", JSON.stringify(newStats));
+            return newStats;
+          });
+          setTimeout(() => setGameState("gameover"), 500);
+        }
+        return next;
+      });
       return;
     }
 
@@ -216,6 +238,14 @@ export default function App() {
       setHistory(history.slice(0, -1));
       setSelectedTile(null);
       setHintedTiles([]);
+      
+      // Update nextValueToMatch to the lowest unmatched value
+      const unmatched = previousState.filter(t => !t.isMatched);
+      if (unmatched.length > 0) {
+        const minVal = Math.min(...unmatched.map(t => t.value));
+        setNextValueToMatch(minVal);
+      }
+      
       playSoundEffect('click', volume);
     }
   };
