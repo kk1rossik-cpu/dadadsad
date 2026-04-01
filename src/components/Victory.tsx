@@ -2,6 +2,8 @@ import { motion } from "motion/react";
 import { Star, RefreshCw, Play } from "lucide-react";
 import { Theme } from "../App";
 
+import { LEVELS } from "../lib/gameLogic";
+
 interface VictoryProps {
   level: number;
   stars: number;
@@ -15,7 +17,7 @@ export default function Victory({ level, stars, onNext, onRetry, theme }: Victor
     <motion.div
       initial={{ scale: 0.8, rotate: -5 }}
       animate={{ scale: 1, rotate: 0 }}
-      className={`bg-white p-10 w-full max-w-md shadow-2xl text-center relative overflow-hidden ${
+      className={`bg-white p-8 md:p-10 w-full max-w-md shadow-2xl text-center relative overflow-hidden ${
         theme === "cartoon" ? "rounded-[60px]" : "rounded-[48px]"
       }`}
     >
@@ -24,12 +26,12 @@ export default function Victory({ level, stars, onNext, onRetry, theme }: Victor
         theme === "cartoon" ? "bg-gradient-to-br from-amber-100 via-pink-100 to-sky-100" : "bg-gradient-to-br from-yellow-100 via-pink-100 to-blue-100"
       }`} />
 
-      <h2 className={`text-5xl font-black mb-4 relative ${
+      <h2 className={`text-4xl md:text-5xl font-black mb-2 md:mb-4 relative ${
         theme === "cartoon" ? "text-amber-600" : "text-gray-800"
       }`}>Победа!</h2>
-      <p className="text-2xl font-bold text-gray-500 mb-8 relative">Уровень {level + 1} пройден</p>
+      <p className="text-xl md:text-2xl font-bold text-gray-500 mb-6 md:mb-8 relative">Уровень {level + 1} пройден</p>
 
-      <div className="flex justify-center gap-4 mb-12 relative">
+      <div className="flex justify-center gap-3 md:gap-4 mb-8 md:mb-12 relative">
         {[1, 2, 3].map((s) => (
           <motion.div
             key={s}
@@ -54,6 +56,7 @@ export default function Victory({ level, stars, onNext, onRetry, theme }: Victor
           className={`w-full py-5 text-white text-2xl font-black transition-all shadow-xl flex items-center justify-center gap-3 ${
             theme === "cartoon" ? "bg-amber-500 rounded-[40px] hover:bg-amber-600 shadow-amber-100" : "bg-green-500 rounded-3xl hover:bg-green-600 shadow-green-200"
           }`}
+          aria-label="Перейти на следующий уровень"
         >
           <Play className="w-8 h-8 fill-white" />
           Дальше
@@ -64,6 +67,7 @@ export default function Victory({ level, stars, onNext, onRetry, theme }: Victor
           className={`w-full py-5 transition-all flex items-center justify-center gap-3 ${
             theme === "cartoon" ? "bg-amber-50 text-amber-600 rounded-[40px] hover:bg-amber-100 font-bold text-xl" : "bg-blue-100 text-blue-600 rounded-3xl text-xl font-bold hover:bg-blue-200"
           }`}
+          aria-label="Переиграть уровень"
         >
           <RefreshCw className="w-6 h-6" />
           Повторить

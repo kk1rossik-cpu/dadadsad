@@ -59,12 +59,20 @@ export default function Tile({ tile, isSelected, isHinted, onClick, theme }: Til
 
   return (
     <motion.div
+      role="button"
+      aria-label={`${tile.isAvailable ? "" : "Заблокированная "}плитка с числом ${tile.value}${isSelected ? ", выбрана" : ""}${isHinted ? ", подсказка" : ""}`}
+      tabIndex={tile.isAvailable ? 0 : -1}
+      onKeyDown={(e) => {
+        if (tile.isAvailable && (e.key === "Enter" || e.key === " ")) {
+          onClick(tile);
+        }
+      }}
       initial={{ scale: 0, opacity: 0 }}
       animate={{ 
         scale: isSelected ? 1.1 : 1, 
         opacity: 1,
-        x: tile.x * 80,
-        y: tile.y * 100,
+        x: tile.x * 80 + (tile.z * 4), // Small offset for 3D stack effect
+        y: tile.y * 100 - (tile.z * 4),
         zIndex: isSelected ? 100 : tile.z * 10,
       }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -77,10 +85,10 @@ export default function Tile({ tile, isSelected, isHinted, onClick, theme }: Til
       whileTap={{ scale: 0.95 }}
       onClick={() => onClick(tile)}
       className={`
-        absolute w-16 h-20 flex items-center justify-center cursor-pointer
-        shadow-md border-b-4 border-r-4 transition-all duration-200
+        absolute w-16 h-20 flex flex-col items-center justify-center cursor-pointer
+        shadow-md border-b-4 border-r-4 transition-all duration-200 outline-none focus-visible:ring-4 focus-visible:ring-blue-400
         ${theme === "cartoon" ? "rounded-[28px]" : "rounded-2xl"}
-        ${tile.isAvailable ? "opacity-100" : "opacity-60 grayscale-[0.5]"}
+        ${tile.isAvailable ? "opacity-100" : "opacity-40 grayscale-[0.8]"}
         ${isSelected 
           ? `ring-4 ${theme === "cartoon" ? "ring-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.6)] border-amber-300" : "ring-blue-500 shadow-[0_0_25px_rgba(59,130,246,0.6)] border-blue-400"} z-[100]` 
           : "border-gray-200"

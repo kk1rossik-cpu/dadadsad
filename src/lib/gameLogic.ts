@@ -1,10 +1,10 @@
 export interface TileData {
   id: string;
   value: number;
-  colorIndex: number; // New field for randomized color
+  colorIndex: number;
   x: number;
   y: number;
-  z: number; // Layer
+  z: number;
   isMatched: boolean;
   isAvailable: boolean;
 }
@@ -14,27 +14,73 @@ export interface LevelConfig {
   cols: number;
   layers: number;
   maxNum: number;
+  pattern?: string[]; // Optional pattern: 'X' for tile, ' ' for empty
 }
 
 export const LEVELS: LevelConfig[] = [
-  { rows: 2, cols: 4, layers: 1, maxNum: 4 }, // Level 1: 8 tiles (4 pairs), numbers 1-4
-  { rows: 3, cols: 4, layers: 1, maxNum: 6 }, // Level 2: 12 tiles (6 pairs), numbers 1-6
-  { rows: 4, cols: 4, layers: 1, maxNum: 8 }, // Level 3: 16 tiles (8 pairs), numbers 1-8
-  { rows: 4, cols: 5, layers: 1, maxNum: 10 }, // Level 4: 20 tiles (10 pairs), numbers 1-10
-  { rows: 4, cols: 6, layers: 1, maxNum: 10 }, // Level 5: 24 tiles (12 pairs), numbers 1-10
+  { rows: 2, cols: 4, layers: 1, maxNum: 4 },   // 8 tiles
+  { rows: 3, cols: 4, layers: 1, maxNum: 6 },   // 12 tiles
+  { rows: 4, cols: 4, layers: 1, maxNum: 8 },   // 16 tiles
+  { 
+    rows: 4, cols: 5, layers: 1, maxNum: 10,
+    pattern: [
+      "XXXXX",
+      "X X X",
+      "X X X",
+      "XXXXX"
+    ]
+  },
+  { 
+    rows: 5, cols: 5, layers: 1, maxNum: 12,
+    pattern: [
+      " XXX ",
+      "XXXXX",
+      "XXXXX",
+      "XXXXX",
+      " XXX "
+    ]
+  },
+  { rows: 5, cols: 6, layers: 1, maxNum: 15 },  // 30 tiles
+  { rows: 4, cols: 4, layers: 2, maxNum: 8 },   // 32 tiles (2 layers)
+  { 
+    rows: 5, cols: 5, layers: 2, maxNum: 12,
+    pattern: [
+      "X X X",
+      " XXX ",
+      "X X X",
+      " XXX ",
+      "X X X"
+    ]
+  },
+  { rows: 5, cols: 6, layers: 2, maxNum: 15 },  // 60 tiles (2 layers)
+  { rows: 6, cols: 6, layers: 2, maxNum: 18 },  // 72 tiles (2 layers)
 ];
 
 export function generateLevel(levelIndex: number): TileData[] {
   const config = LEVELS[Math.min(levelIndex, LEVELS.length - 1)];
-  const totalTiles = config.rows * config.cols * config.layers;
   
-  // Ensure totalTiles is even for pairs
-  if (totalTiles % 2 !== 0) {
-    throw new Error("Total tiles must be even for matching pairs.");
+  const positions: {x: number, y: number, z: number}[] = [];
+  for (let z = 0; z < config.layers; z++) {
+    for (let y = 0; y < config.rows; y++) {
+      for (let x = 0; x < config.cols; x++) {
+        if (config.pattern) {
+          if (config.pattern[y] && config.pattern[y][x] === 'X') {
+            positions.push({x, y, z});
+          }
+        } else {
+          positions.push({x, y, z});
+        }
+      }
+    }
   }
 
+  const totalTiles = positions.length;
+  // Ensure totalTiles is even
+  const finalPositions = totalTiles % 2 === 0 ? positions : positions.slice(0, -1);
+  const finalTotal = finalPositions.length;
+
   const values: number[] = [];
-  for (let i = 0; i < totalTiles / 2; i++) {
+  for (let i = 0; i < finalTotal / 2; i++) {
     const val = (i % config.maxNum) + 1;
     values.push(val, val);
   }
@@ -45,24 +91,16 @@ export function generateLevel(levelIndex: number): TileData[] {
     [values[i], values[j]] = [values[j], values[i]];
   }
 
-  const tiles: TileData[] = [];
-  let valueIdx = 0;
-  for (let z = 0; z < config.layers; z++) {
-    for (let y = 0; y < config.rows; y++) {
-      for (let x = 0; x < config.cols; x++) {
-        tiles.push({
-          id: `tile-${z}-${y}-${x}`,
-          value: values[valueIdx++],
-          colorIndex: Math.floor(Math.random() * 10), // Random color independent of value
-          x,
-          y,
-          z,
-          isMatched: false,
-          isAvailable: true,
-        });
-      }
-    }
-  }
+  const tiles: TileData[] = finalPositions.map((pos, idx) => ({
+    id: `tile-${pos.z}-${pos.y}-${pos.x}-${idx}`,
+    value: values[idx],
+    colorIndex: Math.floor(Math.random() * 20),
+    x: pos.x,
+    y: pos.y,
+    z: pos.z,
+    isMatched: false,
+    isAvailable: true,
+  }));
 
   return updateAvailability(tiles);
 }
@@ -70,9 +108,6 @@ export function generateLevel(levelIndex: number): TileData[] {
 export function updateAvailability(tiles: TileData[]): TileData[] {
   return tiles.map(tile => {
     if (tile.isMatched) return { ...tile, isAvailable: false };
-
-    // For kids 3-7, we simplify: a tile is available if it's not covered from top (z+1)
-    // We ignore side-blocking (left/right) to make it "Very simple and intuitive"
     
     const isCovered = tiles.some(other => 
       !other.isMatched && 
