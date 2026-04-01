@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Settings as SettingsIcon, RotateCcw, Lightbulb, Play, Home, Heart, BarChart2, Shuffle } from "lucide-react";
+import { Settings as SettingsIcon, RotateCcw, Lightbulb, Play, Home, Heart, BarChart2, Shuffle, Maximize2, Minimize2 } from "lucide-react";
 import confetti from "canvas-confetti";
 
 import { TileData, generateLevel, updateAvailability, checkMatch, LEVELS } from "./lib/gameLogic";
@@ -45,6 +45,7 @@ export default function App() {
   const [showStats, setShowStats] = useState(false);
   const [startTime, setStartTime] = useState<number>(0);
   const [nextValueToMatch, setNextValueToMatch] = useState(1);
+  const [zoomMode, setZoomMode] = useState<"fit" | "original">("fit");
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 1200,
     height: typeof window !== "undefined" ? window.innerHeight : 800,
@@ -76,6 +77,7 @@ export default function App() {
     const newTiles = generateLevel(levelIdx);
     setTiles(newTiles);
     setGameState("playing");
+    setZoomMode("fit");
     setHistory([]);
     setSelectedTile(null);
     setHintedTiles([]);
@@ -291,6 +293,9 @@ export default function App() {
     localStorage.setItem("mahjong_theme", theme);
   }, [theme]);
 
+  const boardRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
+
   // Calculate board dimensions
   const boardConfig = LEVELS[Math.min(currentLevel, LEVELS.length - 1)];
   const boardWidth = boardConfig.cols * 80 + (boardConfig.layers * 8);
@@ -299,13 +304,21 @@ export default function App() {
   // Calculate dynamic scale for mobile
   const isMobile = windowSize.width < 768;
   const horizontalPadding = isMobile ? 20 : 40;
-  const verticalPadding = isMobile ? 180 : 240; // Header + Footer + extra
+  const verticalPadding = isMobile ? 160 : 240; // Header + Footer + extra
   const availableWidth = windowSize.width - horizontalPadding;
   const availableHeight = windowSize.height - verticalPadding;
   
   const scaleX = availableWidth / boardWidth;
   const scaleY = availableHeight / boardHeight;
-  const gameScale = Math.min(1, scaleX, scaleY);
+  const fitScale = Math.min(1, scaleX, scaleY);
+  const gameScale = zoomMode === "fit" ? fitScale : (isMobile ? 0.8 : 1);
+
+  // Auto-switch zoom mode for very large levels
+  useEffect(() => {
+    if (fitScale < 0.5 && zoomMode === "fit") {
+      setZoomMode("original");
+    }
+  }, [fitScale, zoomMode]);
 
   // Update music volume when it changes
   useEffect(() => {
@@ -483,11 +496,11 @@ export default function App() {
               className="absolute inset-0 -z-10"
             />
             {/* Header */}
-            <header className="p-3 md:p-6 flex items-center justify-between z-20 safe-top">
+            <header className="p-2 md:p-6 flex items-center justify-between z-20 safe-top">
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setGameState("menu")}
-                className="p-2.5 md:p-4 bg-white rounded-2xl md:rounded-3xl shadow-lg text-gray-600 hover:bg-gray-50 transition-all border border-gray-100"
+                className="p-2 md:p-4 bg-white rounded-2xl md:rounded-3xl shadow-lg text-gray-600 hover:bg-gray-50 transition-all border border-gray-100"
                 aria-label="Вернуться в главное меню"
               >
                 <Home className="w-5 h-5 md:w-8 md:h-8" />
@@ -496,13 +509,25 @@ export default function App() {
               <div className="flex flex-col items-center gap-0.5 md:gap-1">
                 <motion.div 
                   layout
-                  className={`bg-white px-4 md:px-8 py-1.5 md:py-3 rounded-full shadow-lg border-2 ${
+                  className={`bg-white px-3 md:px-8 py-1 md:py-3 rounded-full shadow-lg border-2 flex items-center gap-2 ${
                     theme === "cartoon" ? "border-amber-100" : "border-blue-100"
                   }`}
                 >
-                  <span className={`text-sm md:text-2xl font-black ${
+                  <span className={`text-xs md:text-2xl font-black ${
                     theme === "cartoon" ? "text-amber-600" : "text-blue-600"
-                  }`}>Ищи цифру: {nextValueToMatch}</span>
+                  }`}>Ищи: {nextValueToMatch}</span>
+                  
+                  {isMobile && fitScale < 0.8 && (
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setZoomMode(zoomMode === "fit" ? "original" : "fit")}
+                      className={`p-1.5 rounded-lg border-2 ${
+                        theme === "cartoon" ? "border-amber-200 text-amber-500" : "border-blue-200 text-blue-500"
+                      }`}
+                    >
+                      {zoomMode === "fit" ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+                    </motion.button>
+                  )}
                 </motion.div>
                 <div className="flex gap-1 mt-0.5">
                   {[...Array(3)].map((_, i) => (
@@ -530,8 +555,12 @@ export default function App() {
             </header>
 
             {/* Game Area */}
-            <main className="flex-1 relative flex items-center justify-center overflow-hidden touch-none">
-              <div 
+            <main ref={containerRef} className="flex-1 relative flex items-center justify-center overflow-hidden touch-none">
+              <motion.div 
+                ref={boardRef}
+                drag={zoomMode === "original"}
+                dragConstraints={containerRef}
+                dragElastic={0.1}
                 className="relative transition-transform duration-300"
                 style={{ 
                   width: boardWidth, 
@@ -550,17 +579,23 @@ export default function App() {
                     theme={theme}
                   />
                 ))}
-              </div>
+              </motion.div>
+              
+              {zoomMode === "original" && isMobile && (
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/20 text-white px-3 py-1 rounded-full text-[10px] font-bold pointer-events-none">
+                  Двигай поле пальцем
+                </div>
+              )}
             </main>
 
             {/* Footer Controls */}
-            <footer className="p-3 md:p-8 flex justify-center gap-2 md:gap-8 z-20 safe-bottom">
+            <footer className="p-2 md:p-8 flex justify-center gap-2 md:gap-8 z-20 safe-bottom">
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleUndo}
                 disabled={history.length === 0}
-                className={`flex flex-col items-center gap-0.5 md:gap-2 p-3 md:p-6 transition-all shadow-xl border border-gray-100
-                  ${theme === "cartoon" ? "rounded-[28px] md:rounded-[36px]" : "rounded-[24px] md:rounded-[32px]"}
+                className={`flex flex-col items-center gap-0.5 md:gap-2 p-2.5 md:p-6 transition-all shadow-xl border border-gray-100
+                  ${theme === "cartoon" ? "rounded-[24px] md:rounded-[36px]" : "rounded-[20px] md:rounded-[32px]"}
                   ${history.length > 0 
                     ? (theme === "cartoon" ? "bg-white text-amber-500 hover:bg-amber-50" : "bg-white text-blue-500 hover:bg-blue-50") 
                     : "bg-gray-50 text-gray-300 opacity-50"}
@@ -568,15 +603,15 @@ export default function App() {
                 aria-label="Отменить последний ход"
               >
                 <RotateCcw className="w-5 h-5 md:w-10 md:h-10" />
-                <span className="font-bold text-[10px] md:text-base tracking-tight">Назад</span>
+                <span className="font-bold text-[9px] md:text-base tracking-tight">Назад</span>
               </motion.button>
 
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleShuffle}
                 disabled={lives <= 1}
-                className={`flex flex-col items-center gap-0.5 md:gap-2 p-3 md:p-6 transition-all shadow-xl border border-gray-100
-                  ${theme === "cartoon" ? "rounded-[28px] md:rounded-[36px]" : "rounded-[24px] md:rounded-[32px]"}
+                className={`flex flex-col items-center gap-0.5 md:gap-2 p-2.5 md:p-6 transition-all shadow-xl border border-gray-100
+                  ${theme === "cartoon" ? "rounded-[24px] md:rounded-[36px]" : "rounded-[20px] md:rounded-[32px]"}
                   ${lives > 1 
                     ? (theme === "cartoon" ? "bg-white text-pink-500 hover:bg-pink-50" : "bg-white text-purple-500 hover:bg-purple-50") 
                     : "bg-gray-50 text-gray-300 opacity-50"}
@@ -584,19 +619,19 @@ export default function App() {
                 aria-label="Перемешать плитки (стоит одну жизнь)"
               >
                 <Shuffle className="w-5 h-5 md:w-10 md:h-10" />
-                <span className="font-bold text-[10px] md:text-base tracking-tight">Микс</span>
+                <span className="font-bold text-[9px] md:text-base tracking-tight">Микс</span>
               </motion.button>
 
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleHint}
-                className={`flex flex-col items-center gap-0.5 md:gap-2 p-3 md:p-6 bg-white transition-all shadow-xl border border-gray-100
-                  ${theme === "cartoon" ? "rounded-[28px] md:rounded-[36px] text-sky-500 hover:bg-sky-50" : "rounded-[24px] md:rounded-[32px] text-yellow-500 hover:bg-yellow-50"}
+                className={`flex flex-col items-center gap-0.5 md:gap-2 p-2.5 md:p-6 bg-white transition-all shadow-xl border border-gray-100
+                  ${theme === "cartoon" ? "rounded-[24px] md:rounded-[36px] text-sky-500 hover:bg-sky-50" : "rounded-[20px] md:rounded-[32px] text-yellow-500 hover:bg-yellow-50"}
                 `}
                 aria-label="Показать подсказку"
               >
                 <Lightbulb className="w-5 h-5 md:w-10 md:h-10" />
-                <span className="font-bold text-[10px] md:text-base tracking-tight">Хелп</span>
+                <span className="font-bold text-[9px] md:text-base tracking-tight">Хелп</span>
               </motion.button>
             </footer>
           </motion.div>
