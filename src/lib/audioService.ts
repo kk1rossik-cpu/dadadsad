@@ -1,6 +1,18 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("GEMINI_API_KEY is missing. Audio generation will be disabled.");
+      return null;
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 const audioCache: Record<number, string> = {};
 const pendingRequests: Record<number, Promise<string>> = {};
@@ -25,6 +37,9 @@ export async function prewarmAudio() {
 }
 
 async function fetchWithRetry(num: number, retries = 3, delay = 1000): Promise<string> {
+  const ai = getAI();
+  if (!ai) return "";
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
