@@ -1,16 +1,37 @@
 import { motion } from "motion/react";
-import { Volume2, VolumeX, X } from "lucide-react";
+import { Volume2, VolumeX, X, PlayCircle, Music, Palette } from "lucide-react";
+import { testVoice, startBackgroundMusic, stopBackgroundMusic } from "../lib/audioService";
+import { Theme } from "../App";
 
 interface SettingsProps {
   isOpen: boolean;
   onClose: () => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
+  musicEnabled: boolean;
+  onToggleMusic: () => void;
   volume: number;
   onVolumeChange: (val: number) => void;
+  musicVolume: number;
+  onMusicVolumeChange: (val: number) => void;
+  theme: Theme;
+  onThemeChange: (theme: Theme) => void;
 }
 
-export default function Settings({ isOpen, onClose, soundEnabled, onToggleSound, volume, onVolumeChange }: SettingsProps) {
+export default function Settings({ 
+  isOpen, 
+  onClose, 
+  soundEnabled, 
+  onToggleSound, 
+  musicEnabled,
+  onToggleMusic,
+  volume, 
+  onVolumeChange,
+  musicVolume,
+  onMusicVolumeChange,
+  theme,
+  onThemeChange
+}: SettingsProps) {
   if (!isOpen) return null;
 
   return (
@@ -47,9 +68,21 @@ export default function Settings({ isOpen, onClose, soundEnabled, onToggleSound,
             </button>
           </div>
 
+          <div className="flex items-center justify-between">
+            <span className="text-xl font-medium text-gray-700">Музыка</span>
+            <button
+              onClick={onToggleMusic}
+              className={`p-4 rounded-full transition-all ${
+                musicEnabled ? "bg-purple-100 text-purple-600" : "bg-gray-100 text-gray-400"
+              }`}
+            >
+              <Music className="w-8 h-8" />
+            </button>
+          </div>
+
           <div className="space-y-4">
             <div className="flex justify-between text-gray-600">
-              <span className="text-lg">Громкость</span>
+              <span className="text-lg">Громкость звуков</span>
               <span className="text-lg font-bold">{Math.round(volume * 100)}%</span>
             </div>
             <input
@@ -61,6 +94,65 @@ export default function Settings({ isOpen, onClose, soundEnabled, onToggleSound,
               onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
               className="w-full h-4 bg-gray-200 rounded-full appearance-none cursor-pointer accent-blue-500"
             />
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between text-gray-600">
+              <span className="text-lg">Громкость музыки</span>
+              <span className="text-lg font-bold">{Math.round(musicVolume * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={musicVolume}
+              onChange={(e) => onMusicVolumeChange(parseFloat(e.target.value))}
+              className="w-full h-4 bg-gray-200 rounded-full appearance-none cursor-pointer accent-purple-500"
+            />
+          </div>
+
+          <div className="pt-4 border-t border-gray-100">
+            <div className="flex items-center gap-3 mb-4 text-gray-700 font-medium text-lg">
+              <Palette className="w-6 h-6" />
+              <span>Тема оформления</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => onThemeChange("material")}
+                className={`py-3 rounded-2xl font-bold transition-all border-2 ${
+                  theme === "material" 
+                    ? "bg-blue-50 border-blue-500 text-blue-600" 
+                    : "bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100"
+                }`}
+              >
+                Material
+              </button>
+              <button
+                onClick={() => onThemeChange("cartoon")}
+                className={`py-3 rounded-2xl font-bold transition-all border-2 ${
+                  theme === "cartoon" 
+                    ? "bg-amber-50 border-amber-500 text-amber-600" 
+                    : "bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100"
+                }`}
+              >
+                Cartoon
+              </button>
+            </div>
+          </div>
+
+          {/* Voice Test Button */}
+          <div className="pt-4">
+            <button
+              onClick={() => testVoice(volume)}
+              className="w-full py-4 bg-blue-50 text-blue-600 rounded-3xl font-bold text-xl flex items-center justify-center gap-3 hover:bg-blue-100 transition-all border-2 border-blue-100"
+            >
+              <PlayCircle className="w-6 h-6" />
+              Проверить голос
+            </button>
+            <p className="text-center text-sm text-gray-400 mt-2">
+              Нажми, чтобы услышать «Один»
+            </p>
           </div>
         </div>
 
